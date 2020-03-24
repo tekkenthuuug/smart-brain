@@ -47,11 +47,46 @@ class App extends Component {
     this.state = initialState;
   }
 
+  componentDidMount() {
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      fetch('http://localhost:3000/signin', {
+        method: 'post',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: token
+        }
+      })
+        .then((r) => r.json())
+        .then((data) => {
+          if (data.id) {
+            fetch(`http://localhost:3000/profile/${data.id}`, {
+              method: 'get',
+              headers: {
+                'Content-type': 'application/json',
+                Authorization: token
+              }
+            })
+              .then((resp) => resp.json())
+              .then((user) => {
+                if (user.email) {
+                  this.loadUser(user);
+                  this.onRouteChange('home');
+                }
+              });
+          }
+        })
+        .catch(console.log);
+    }
+  }
+
   loadUser = (data) => {
     this.setState({
       user: {
         id: data.id,
         name: data.name,
+        pet: data.pet,
+        age: data.age,
         email: data.email,
         entries: data.entries,
         joined: data.joined
@@ -78,6 +113,7 @@ class App extends Component {
   };
 
   displayFaceBox = (boxes) => {
+    if (!boxes) return;
     this.setState({ boxes: boxes });
   };
 
@@ -89,7 +125,7 @@ class App extends Component {
     this.setState({ imageUrl: this.state.input });
     fetch('http://localhost:3000/imageurl', {
       method: 'post',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: sessionStorage.getItem('token') },
       body: JSON.stringify({
         input: this.state.input
       })
@@ -99,7 +135,7 @@ class App extends Component {
         if (response) {
           fetch('http://localhost:3000/image', {
             method: 'put',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', Authorization: sessionStorage.getItem('token') },
             body: JSON.stringify({
               id: this.state.user.id
             })
@@ -139,7 +175,12 @@ class App extends Component {
         <Navigation isSignedIn={isSignedIn} onRouteChange={this.onRouteChange} toggleModal={this.toggleModal} />
         {isProfileOpened && (
           <Modal>
-            <Profile isProfileOpened={isProfileOpened} toggleModal={this.toggleModal} user={user} />
+            <Profile
+              isProfileOpened={isProfileOpened}
+              toggleModal={this.toggleModal}
+              user={user}
+              loadUser={this.loadUser}
+            />
           </Modal>
         )}
         {route === 'home' ? (

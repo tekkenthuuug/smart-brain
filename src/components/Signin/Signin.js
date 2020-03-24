@@ -18,6 +18,10 @@ class Signin extends React.Component {
     this.setState({ signInPassword: event.target.value });
   };
 
+  saveAuthTokenInSessions = (token) => {
+    sessionStorage.setItem('token', token);
+  };
+
   onSubmitSignIn = () => {
     fetch('http://localhost:3000/signin', {
       method: 'post',
@@ -28,10 +32,23 @@ class Signin extends React.Component {
       })
     })
       .then((response) => response.json())
-      .then((user) => {
-        if (user.id) {
-          this.props.loadUser(user);
-          this.props.onRouteChange('home');
+      .then((data) => {
+        if (data.userId && data.success) {
+          this.saveAuthTokenInSessions(data.token);
+          fetch(`http://localhost:3000/profile/${data.userId}`, {
+            method: 'get',
+            headers: {
+              'Content-type': 'application/json',
+              Authorization: data.token
+            }
+          })
+            .then((resp) => resp.json())
+            .then((user) => {
+              if (user) {
+                this.props.loadUser(user);
+                this.props.onRouteChange('home');
+              }
+            });
         }
       });
   };
